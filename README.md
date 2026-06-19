@@ -96,9 +96,28 @@ re-rolls organically each frame. The dominant-colour mosaic always samples the
 **pristine** decoded frame — never the glitched output — so effects layer on top
 without feeding back into the sampling.
 
-> _Want a preview image here?_ Drop a screenshot/GIF of the player into the repo
-> (e.g. `docs/preview.gif`) and reference it — I kept this text-only so the README
-> has no binary assets.
+### Capturing a preview GIF
+
+Want the animated `docs/preview.gif` referenced above? Capture it from the player
+itself — no screen recorder needed:
+
+1. Open the player (the live site, or a generated `.glitch.html`), pick a look
+   (e.g. the `heavy-datamosh-mosaic` preset).
+2. Click **⬇ Download video** (WebM) — or **🎞 Record** for a manual window.
+3. Convert the WebM to a high-quality GIF with ffmpeg (two-pass palette):
+
+   ```bash
+   # 12 fps, 640px wide, optimized palette (two-pass)
+   ffmpeg -i glitch-video.webm -vf "fps=12,scale=640:-1:flags=lanczos,palettegen" -y palette.png
+   ffmpeg -i glitch-video.webm -i palette.png \
+     -filter_complex "fps=12,scale=640:-1:flags=lanczos[x];[x][1:v]paletteuse" \
+     -y docs/preview.gif
+   ```
+
+4. Reference it in this section: `![preview](docs/preview.gif)` and push — CI
+   redeploys automatically.
+
+Keep GIFs short (a few seconds) and ≤ ~640px wide so the repo stays light.
 
 ---
 
