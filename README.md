@@ -1,5 +1,8 @@
 # GlitchVideo
 
+[![Deploy converter to GitHub Pages](https://github.com/imcmurray/glitch-video-converter/actions/workflows/pages.yml/badge.svg)](https://github.com/imcmurray/glitch-video-converter/actions/workflows/pages.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-23f0ff.svg)](LICENSE)
+
 ### ▶ Try it in your browser: **https://imcmurray.github.io/glitch-video-converter/**
 
 Convert a normal video into a **stylized digital glitch-art animation** that plays
@@ -29,14 +32,11 @@ Build the converter page and host it as a static site:
 python3 glitch_processor.py --build-web        # writes index.html
 ```
 
-Then deploy `index.html` anywhere static — e.g. GitHub Pages:
-
-```bash
-git init && git add index.html && git commit -m "Glitch video converter"
-git branch -M main && git remote add origin <your-repo>
-git push -u origin main
-# In the repo: Settings → Pages → Branch: main / root.  Done.
-```
+Then host `index.html` anywhere static. **This repo deploys itself** via
+GitHub Actions ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)):
+on every push to `main` it reruns `--build-web` and publishes the fresh page to
+Pages, so the hosted app never drifts from `glitch_processor.py`. To replicate on
+your own fork: **Settings → Pages → Source: GitHub Actions**, then push.
 
 Visitors **drop in a video**, tune grid size / fps / colours / preset / mosaic /
 audio, hit **Convert**, preview live, and **download a standalone `.glitch.html`**.
@@ -58,6 +58,47 @@ Notes & limits:
   the chosen sample rate — reliable and dependency-free, just larger than the
   CLI's Opus. For the smallest files with real audio, use the CLI + `--audio`.
 - Nothing is uploaded — the video never leaves the visitor's machine.
+
+---
+
+## How it works
+
+Two front-ends (CLI + browser) share **one** player and **one** data format. The
+core idea: store a clean, tiny, recognizable video; generate the glitch *live*.
+
+```
+            ┌──────────────────────── CLI (Python) ───────────────────────┐
+ video ───▶ │  ffmpeg decode → downscale 96×54 → palette-quantize (1 B/px) │
+            │  → delta-encode (keyframe + changed pixels) → gzip → base64  │
+            └──────────────────────────────────┬──────────────────────────┘
+                                                │   (identical format)
+            ┌──────────────────── Browser (index.html) ───────────────────┐
+ video ───▶ │  <video>+canvas decode → same quantize/delta → CompressionStream gzip
+            └──────────────────────────────────┬──────────────────────────┘
+                                                ▼
+                         data = base64( gzip( JSON ) )   ◀── a few % of the source
+                                                │
+                                                ▼  injected into the shared template
+            ┌─────────────── Self-contained player .html ─────────────────┐
+ open ───▶  │  DecompressionStream → frames →  PER FRAME, LIVE:            │
+            │    pristine grid → [dominant-colour mosaic] → glitch overlay │
+            │    (RGB split · datamosh blocks · tears · noise · TV static  │
+            │     · corruption · scanlines) → canvas                       │
+            │  + sound (procedural SFX / embedded track)                   │
+            │  + offline WebCodecs export → WebM (VP9/Opus) | MP4 (H.264/AAC)
+            └─────────────────────────────────────────────────────────────┘
+```
+
+**Why store the signal, not the glitch?** Glitch artifacts are high-entropy noise
+that compresses terribly. By storing only the clean low-res frames and rendering
+every effect procedurally at playback, the data stays tiny *and* the glitch
+re-rolls organically each frame. The dominant-colour mosaic always samples the
+**pristine** decoded frame — never the glitched output — so effects layer on top
+without feeding back into the sampling.
+
+> _Want a preview image here?_ Drop a screenshot/GIF of the player into the repo
+> (e.g. `docs/preview.gif`) and reference it — I kept this text-only so the README
+> has no binary assets.
 
 ---
 
