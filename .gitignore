@@ -1,0 +1,17 @@
+# Generated player outputs (can be huge; regenerate with glitch_processor.py)
+glitch_animation.html
+*.glitch.html
+
+# Local test inputs / media
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+
+# Python
+__pycache__/
+*.pyc
+
+# CI build output
+_site/
